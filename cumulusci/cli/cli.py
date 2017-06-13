@@ -4,6 +4,7 @@ import sys
 import webbrowser
 import code
 import yaml
+import urllib
 
 import click
 from plaintable import Table
@@ -375,6 +376,21 @@ def org_browser(config, org_name):
     # Save the org config in case it was modified
     config.keychain.set_org(org_name, org_config)
 
+@click.command(name='workbench')
+@click.argument('org_name')
+@pass_config
+def org_workbench(config, org_name):
+    check_connected_app(config)
+
+    org_config = config.project_config.get_org(org_name)
+    org_config.refresh_oauth_token(config.keychain.get_connected_app())
+
+    url = 'https://workbench.internal.salesforce.com/login.php?sid={0}&serverUrl={1}%2Fservices%2FSoap%2Fu%2F40.0'
+    
+    webbrowser.open(url.format(urllib.quote_plus(org_config.config['access_token']), urllib.quote_plus(org_config.config['instance_url'])))
+
+    config.keychain.set_org(org_name, org_config)
+
 @click.command(name='connect', help="Connects a new org's credentials using OAuth Web Flow")
 @click.argument('org_name')
 @click.option('--sandbox', is_flag=True, help="If set, connects to a Salesforce sandbox org")
@@ -524,6 +540,7 @@ def org_config_connected_app(config, client_id, client_secret, callback_url, pro
     config.keychain.set_connected_app(app_config, project)
 
 org.add_command(org_browser)
+org.add_command(org_workbench)
 org.add_command(org_config_connected_app)
 org.add_command(org_connect)
 org.add_command(org_connected_app)
